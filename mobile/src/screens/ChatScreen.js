@@ -6,7 +6,7 @@ import { AuthContext } from '../store/AuthContext';
 import { COLORS } from '../theme/colors';
 
 // Ensure this matches your backend API_URL base
-const SOCKET_URL = 'http://10.16.54.72:5000'; 
+const SOCKET_URL = 'http://10.16.59.203:5000'; 
 
 export default function ChatScreen({ route }) {
   const { user } = useContext(AuthContext);
@@ -59,7 +59,11 @@ export default function ChatScreen({ route }) {
   };
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.container}>
+    <KeyboardAvoidingView 
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
+      style={styles.container}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 90}
+    >
       <View style={styles.header}>
         <Text style={styles.headerTitle}>{roomName.replace('_', ' ')}</Text>
       </View>

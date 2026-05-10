@@ -6,18 +6,28 @@ const { protect } = require('../middleware/authMiddleware');
 const { admin } = require('../middleware/adminMiddleware');
 const Notification = require('../models/Notification');
 
-// Get all events
-router.get('/', async (req, res) => {
+// Get all events (Filtered by eligibility for students)
+router.get('/', protect, async (req, res) => {
   try {
-    let events = await Event.find().populate('organizedBy');
+    let query = {};
+    if (req.user.role !== 'admin') {
+      query = {
+        $and: [
+          { $or: [{ 'eligibility.department': 'All' }, { 'eligibility.department': req.user.department }] },
+          { $or: [{ 'eligibility.year': 'All' }, { 'eligibility.year': req.user.year }] }
+        ]
+      };
+    }
+    
+    let events = await Event.find(query).populate('organizedBy');
     
     // If no events exist in the database, seed some default ones for demo purposes
     if (events.length === 0) {
       const mockEvents = [
         {
           title: 'Annual Tech Symposium',
-          description: 'A grand symposium showcasing the latest in technology and innovation. Join us for guest lectures, workshops, and project displays.',
-          date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
+          description: 'A grand symposium showcasing the latest in technology and innovation.',
+          date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
           location: 'Main Auditorium',
           eligibility: { department: 'All', year: 'All' },
           imageUrl: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=500',
@@ -26,45 +36,61 @@ router.get('/', async (req, res) => {
         },
         {
           title: 'Inter-Department Hackathon',
-          description: '24-hour coding challenge to solve real-world problems. Great prizes to be won!',
-          date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // 3 days from now
+          description: '24-hour coding challenge to solve real-world problems.',
+          date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
           location: 'CS Lab 3',
           eligibility: { department: 'Computer Science', year: 'All' },
           imageUrl: 'https://images.unsplash.com/photo-1504384308090-c564bd248275?w=500',
           isPaid: false
-        },
-        {
-          title: 'Cultural Night 2026',
-          description: 'An evening of music, dance, and drama showcasing the diverse cultures of our college.',
-          date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14 days from now
-          location: 'Open Air Theatre',
-          eligibility: { department: 'All', year: 'All' },
-          imageUrl: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=500',
-          isPaid: true,
-          price: 50
         }
       ];
-      
       await Event.insertMany(mockEvents);
-      events = await Event.find().populate('organizedBy'); // Refetch populated
+      events = await Event.find(query).populate('organizedBy');
     }
 
-    // Fallback for events that don't have images yet in the database
-    const fallbackImages = [
-      'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=500',
-      'https://images.unsplash.com/photo-1504384308090-c564bd248275?w=500',
-      'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=500'
-    ];
+    res.json(events);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
 
-    const updatedEvents = events.map((event, index) => {
-      const eventObj = event.toObject();
-      if (!eventObj.imageUrl) {
-        eventObj.imageUrl = fallbackImages[index % fallbackImages.length];
+// Reset and seed events (for testing)
+router.get('/reset', async (req, res) => {
+  try {
+    await Event.deleteMany({});
+    const mockEvents = [
+      {
+        title: 'Annual Tech Symposium',
+        description: 'A grand symposium showcasing the latest in technology and innovation. Join us for guest lectures, workshops, and project displays.',
+        date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        location: 'Main Auditorium',
+        eligibility: { department: 'All', year: 'All' },
+        imageUrl: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=500',
+        isPaid: true,
+        price: 100
+      },
+      {
+        title: 'Inter-Department Hackathon',
+        description: '24-hour coding challenge to solve real-world problems. Great prizes to be won!',
+        date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+        location: 'CS Lab 3',
+        eligibility: { department: 'Computer Science', year: 'All' },
+        imageUrl: 'https://images.unsplash.com/photo-1504384308090-c564bd248275?w=500',
+        isPaid: false
+      },
+      {
+        title: 'Cultural Night 2026',
+        description: 'An evening of music, dance, and drama showcasing the diverse cultures of our college.',
+        date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+        location: 'Open Air Theatre',
+        eligibility: { department: 'All', year: 'All' },
+        imageUrl: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=500',
+        isPaid: true,
+        price: 50
       }
-      return eventObj;
-    });
-    
-    res.json(updatedEvents);
+    ];
+    await Event.insertMany(mockEvents);
+    res.json({ message: 'Events reset and seeded successfully!' });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -75,7 +101,17 @@ router.get('/:id', async (req, res) => {
   try {
     const event = await Event.findById(req.params.id).populate('organizedBy');
     if (!event) return res.status(404).json({ message: 'Event not found' });
-    res.json(event);
+    
+    const eventObj = event.toObject();
+    if (event.isPaid) {
+      // Generate UPI URI
+      const upiUri = `upi://pay?pa=${event.upiId || 'college@upi'}&pn=CollegeName&am=${event.price}&cu=INR&tn=Event_${event.title.replace(/\s+/g, '_')}`;
+      // Generate QR Code base64
+      const paymentQr = await QRCode.toDataURL(upiUri);
+      eventObj.paymentQr = paymentQr;
+    }
+    
+    res.json(eventObj);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -146,7 +182,7 @@ router.put('/:id', protect, admin, async (req, res) => {
 
 // Register for an event
 router.post('/:id/register', protect, async (req, res) => {
-  const { role } = req.body; // Expecting 'Participant' or 'Audience'
+  const { role, paymentId } = req.body; // Expecting 'Participant' or 'Audience'
   try {
     const event = await Event.findById(req.params.id);
     if (!event) return res.status(404).json({ message: 'Event not found' });
@@ -164,7 +200,12 @@ router.post('/:id/register', protect, async (req, res) => {
     });
     
     if (!isAlreadyRegistered) {
-      event.registeredUsers.push({ user: req.user._id, role: role || 'Audience' });
+      event.registeredUsers.push({ 
+        user: req.user._id, 
+        role: role || 'Audience',
+        paymentId: paymentId || '',
+        paymentStatus: event.isPaid ? 'pending' : 'paid'
+      });
       await event.save();
     }
 
@@ -183,43 +224,20 @@ router.post('/:id/register', protect, async (req, res) => {
   }
 });
 
-// Reset and seed events (for testing)
-router.get('/reset', async (req, res) => {
+// Approve payment (Admin only)
+router.post('/:id/approve-payment', protect, admin, async (req, res) => {
+  const { userId } = req.body;
   try {
-    await Event.deleteMany({});
-    const mockEvents = [
-      {
-        title: 'Annual Tech Symposium',
-        description: 'A grand symposium showcasing the latest in technology and innovation. Join us for guest lectures, workshops, and project displays.',
-        date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-        location: 'Main Auditorium',
-        eligibility: { department: 'All', year: 'All' },
-        imageUrl: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=500',
-        isPaid: true,
-        price: 100
-      },
-      {
-        title: 'Inter-Department Hackathon',
-        description: '24-hour coding challenge to solve real-world problems. Great prizes to be won!',
-        date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
-        location: 'CS Lab 3',
-        eligibility: { department: 'Computer Science', year: 'All' },
-        imageUrl: 'https://images.unsplash.com/photo-1504384308090-c564bd248275?w=500',
-        isPaid: false
-      },
-      {
-        title: 'Cultural Night 2026',
-        description: 'An evening of music, dance, and drama showcasing the diverse cultures of our college.',
-        date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
-        location: 'Open Air Theatre',
-        eligibility: { department: 'All', year: 'All' },
-        imageUrl: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=500',
-        isPaid: true,
-        price: 50
-      }
-    ];
-    await Event.insertMany(mockEvents);
-    res.json({ message: 'Events reset and seeded successfully!' });
+    const event = await Event.findById(req.params.id);
+    if (!event) return res.status(404).json({ message: 'Event not found' });
+
+    const registration = event.registeredUsers.find(r => r.user && r.user.toString() === userId);
+    if (!registration) return res.status(404).json({ message: 'Registration not found' });
+
+    registration.paymentStatus = 'paid';
+    await event.save();
+
+    res.json({ message: 'Payment approved successfully' });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

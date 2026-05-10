@@ -35,6 +35,8 @@ router.post('/register', async (req, res) => {
       name: user.name,
       email: user.email,
       role: user.role,
+      department: user.department,
+      year: user.year,
       token: generateToken(user._id)
     });
   } catch (error) {
@@ -53,6 +55,8 @@ router.post('/login', async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        department: user.department,
+        year: user.year,
         token: generateToken(user._id)
       });
     } else {
@@ -70,7 +74,7 @@ router.get('/profile', protect, async (req, res) => {
     if (!user) return res.status(404).json({ message: 'User not found' });
 
     // Find events registered by this user
-    const registeredEvents = await Event.find({ registeredUsers: req.user._id });
+    const registeredEvents = await Event.find({ 'registeredUsers.user': req.user._id });
 
     res.json({
       user,

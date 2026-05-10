@@ -7,6 +7,7 @@ export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isAdminMode, setIsAdminMode] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const { login } = useContext(AuthContext);
 
   const toggleMode = (isAdmin) => {
@@ -44,13 +45,18 @@ export default function LoginScreen({ navigation }) {
           value={email}
           onChangeText={setEmail}
         />
-        <TextInput 
-          style={styles.input} 
-          placeholder="Password" 
-          secureTextEntry
-          value={password}
-          onChangeText={setPassword}
-        />
+        <View style={styles.passwordContainer}>
+          <TextInput 
+            style={styles.passwordInput} 
+            placeholder="Password" 
+            secureTextEntry={!showPassword}
+            value={password}
+            onChangeText={setPassword}
+          />
+          <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.showBtn}>
+            <Text style={styles.showBtnText}>{showPassword ? 'Hide' : 'Show'}</Text>
+          </TouchableOpacity>
+        </View>
         
         <TouchableOpacity style={[styles.button, isAdminMode && { backgroundColor: COLORS.secondary }]} onPress={() => login(email, password)}>
           <Text style={styles.buttonText}>{isAdminMode ? 'Admin Log In' : 'Log In'}</Text>
@@ -125,6 +131,27 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 15,
     fontSize: 16,
+  },
+  passwordContainer: {
+    flexDirection: 'row',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    marginBottom: 15,
+    alignItems: 'center',
+    paddingRight: 10,
+  },
+  passwordInput: {
+    flex: 1,
+    padding: 15,
+    fontSize: 16,
+  },
+  showBtn: {
+    padding: 5,
+  },
+  showBtnText: {
+    color: COLORS.primary,
+    fontWeight: 'bold',
   },
   button: {
     backgroundColor: COLORS.primary,

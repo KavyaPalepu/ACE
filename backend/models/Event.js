@@ -12,10 +12,13 @@ const eventSchema = new mongoose.Schema({
   organizedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Club' },
   registeredUsers: [{
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-    role: { type: String, enum: ['Participant', 'Audience'] }
+    role: { type: String, enum: ['Participant', 'Audience'] },
+    paymentStatus: { type: String, enum: ['pending', 'paid'], default: 'pending' },
+    paymentId: { type: String }
   }],
   isPaid: { type: Boolean, default: false },
   price: { type: Number },
+  upiId: { type: String },
   imageUrl: { type: String }
 }, { timestamps: true });
 

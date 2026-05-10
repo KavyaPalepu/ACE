@@ -11,6 +11,14 @@ export default function EventDetailsScreen({ route, navigation }) {
   const [loading, setLoading] = useState(!paramEvent);
   const [isRegistered, setIsRegistered] = useState(paramEvent?.registeredUsers?.some(r => (r.user?._id || r.user) === user?._id) || false);
   const [showAISummary, setShowAISummary] = useState(false);
+  const [isLeaveModalVisible, setIsLeaveModalVisible] = useState(false);
+  const [leaveReason, setLeaveReason] = useState('');
+  const [modalStep, setModalStep] = useState('choose_role'); // 'choose_role' or 'payment'
+  const [selectedRole, setSelectedRole] = useState(null);
+  const [paymentId, setPaymentId] = useState('');
+  
+  const registration = event?.registeredUsers?.find(r => (r.user?._id || r.user) === user?._id);
+  const isPaidVerified = registration?.paymentStatus === 'paid' || !event?.isPaid;
 
   const id = eventId || paramEvent?._id;
 
@@ -42,7 +50,7 @@ export default function EventDetailsScreen({ route, navigation }) {
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [editTitle, setEditTitle] = useState(event?.title || '');
   const [editDesc, setEditDesc] = useState(event?.description || '');
-  const [editDate, setEditDate] = useState(event?.date ? event.date.split('T')[0] : '');
+  const [editDate, setEditDate] = useState(event?.date ? new Date(event.date).toISOString().split('T')[0] : '');
   const [editLoc, setEditLoc] = useState(event?.location || '');
   const [editImg, setEditImg] = useState(event?.imageUrl || '');
 
@@ -50,7 +58,7 @@ export default function EventDetailsScreen({ route, navigation }) {
     if (event) {
       setEditTitle(event.title || '');
       setEditDesc(event.description || '');
-      setEditDate(event.date ? event.date.split('T')[0] : '');
+      setEditDate(event.date ? new Date(event.date).toISOString().split('T')[0] : '');
       setEditLoc(event.location || '');
       setEditImg(event.imageUrl || '');
     }
@@ -101,6 +109,72 @@ export default function EventDetailsScreen({ route, navigation }) {
     navigation.navigate('Chat', { roomName: `Event_${event._id}` });
   };
 
+  const handleLeaveRequest = async () => {
+    if (!leaveReason.trim()) {
+      Alert.alert('Error', 'Please provide a reason for cancellation.');
+      return;
+    }
+    try {
+      await api.post('/requests/event-leave', { eventId: id, reason: leaveReason });
+      Alert.alert('Success', 'Cancellation request submitted successfully! Admin will review it.');
+      setIsLeaveModalVisible(false);
+      setLeaveReason('');
+    } catch (e) {
+      Alert.alert('Error', e.response?.data?.message || 'Failed to submit request');
+    }
+  };
+
+  const handleRoleSelect = async (role) => {
+    if (event.isPaid) {
+      setSelectedRole(role);
+      setModalStep('payment');
+    } else {
+      try {
+        await api.post(`/events/${id}/register`, { role });
+        Alert.alert('Success', 'Registered successfully!');
+        setIsRoleModalVisible(false);
+        // Refetch event to update UI
+        const { data } = await api.get(`/events/${id}`);
+        setEvent(data);
+        setIsRegistered(true);
+      } catch (e) {
+        Alert.alert('Error', e.response?.data?.message || 'Failed to register');
+      }
+    }
+  };
+
+  const handleConfirmPayment = async () => {
+    if (event.isPaid && !paymentId.trim()) {
+      Alert.alert('Error', 'Please enter your Payment ID / Transaction ID');
+      return;
+    }
+    try {
+      await api.post(`/events/${id}/register`, { role: selectedRole, paymentId });
+      Alert.alert('Success', 'Registration submitted! Please wait for admin to verify payment.');
+      setIsRoleModalVisible(false);
+      setModalStep('choose_role');
+      setPaymentId('');
+      // Refetch event to update UI
+      const { data } = await api.get(`/events/${id}`);
+      setEvent(data);
+      setIsRegistered(true);
+    } catch (e) {
+      Alert.alert('Error', e.response?.data?.message || 'Failed to register');
+    }
+  };
+
+  const handleApprovePayment = async (userId) => {
+    try {
+      await api.post(`/events/${id}/approve-payment`, { userId });
+      Alert.alert('Success', 'Payment approved successfully!');
+      // Refetch event to update UI
+      const { data } = await api.get(`/events/${id}`);
+      setEvent(data);
+    } catch (e) {
+      Alert.alert('Error', 'Failed to approve payment');
+    }
+  };
+
   if (loading && !event) {
     return <ActivityIndicator size="large" color={COLORS.primary} style={{ flex: 1 }} />;
   }
@@ -142,12 +216,21 @@ export default function EventDetailsScreen({ route, navigation }) {
         <Text style={styles.sectionTitle}>Event Features</Text>
         
         {user?.role === 'admin' ? (
-          <TouchableOpacity 
-            style={styles.primaryButton}
-            onPress={() => setIsEditModalVisible(true)}
-          >
-            <Text style={styles.buttonText}>Edit Event Details</Text>
-          </TouchableOpacity>
+          <View>
+            <View style={styles.statsBox}>
+              <Text style={styles.statsTitle}>📊 Registration Stats</Text>
+              <Text style={styles.statsText}>Total Registered: {event.registeredUsers?.length || 0}</Text>
+              <Text style={styles.statsText}>👥 Participants: {event.registeredUsers?.filter(r => r.role === 'Participant').length || 0}</Text>
+              <Text style={styles.statsText}>🎭 Audience: {event.registeredUsers?.filter(r => r.role === 'Audience').length || 0}</Text>
+            </View>
+            
+            <TouchableOpacity 
+              style={styles.primaryButton}
+              onPress={() => setIsEditModalVisible(true)}
+            >
+              <Text style={styles.buttonText}>Edit Event Details</Text>
+            </TouchableOpacity>
+          </View>
         ) : !isRegistered ? (
           <TouchableOpacity 
             style={[styles.primaryButton, (!isEligible || loading) && styles.disabledButton]}
@@ -162,9 +245,36 @@ export default function EventDetailsScreen({ route, navigation }) {
           </TouchableOpacity>
         ) : (
           <View>
-            <View style={[styles.eligibilityBadge, styles.eligible, {marginBottom: 15}]}>
-              <Text style={styles.eligibilityText}>You are Registered ✓</Text>
-            </View>
+            {isPaidVerified ? (
+              <View>
+                <View style={[styles.eligibilityBadge, styles.eligible, {marginBottom: 15}]}>
+                  <Text style={styles.eligibilityText}>You are Registered ✓</Text>
+                </View>
+
+                <TouchableOpacity style={styles.primaryButton} onPress={() => navigation.navigate('Ticket', { event })}>
+                  <Text style={styles.buttonText}>🎟️ View Ticket</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View>
+                <View style={[styles.eligibilityBadge, { backgroundColor: '#ffeb3b', marginBottom: 15, alignItems: 'center' }]}>
+                  <Text style={{ color: '#000', fontWeight: 'bold' }}>⏳ Registration & Payment Pending</Text>
+                </View>
+
+                <View style={styles.paymentInfo}>
+                  <Text style={styles.paymentText}>💰 Complete Your Payment: ₹{event.price}</Text>
+                  <Text style={styles.paymentSubtext}>Please scan the UPI QR below to pay. Your registration will be confirmed once the admin verifies the payment.</Text>
+                  
+                  {event.paymentQr ? (
+                    <Image source={{ uri: event.paymentQr }} style={{ width: 150, height: 150, alignSelf: 'center', marginBottom: 10, borderRadius: 8 }} />
+                  ) : (
+                    <View style={styles.mockQrBox}>
+                      <Text style={styles.mockQrText}>[ Mock UPI QR Code ]</Text>
+                    </View>
+                  )}
+                </View>
+              </View>
+            )}
             
             <TouchableOpacity style={styles.secondaryButton} onPress={handleEventChat}>
               <Text style={styles.secondaryButtonText}>💬 Join Event Chat Group</Text>
@@ -172,6 +282,10 @@ export default function EventDetailsScreen({ route, navigation }) {
 
             <TouchableOpacity style={styles.secondaryButton} onPress={handleResourceRequest}>
               <Text style={styles.secondaryButtonText}>📦 Structured Resource Request</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={[styles.secondaryButton, { marginTop: 10, borderColor: COLORS.error }]} onPress={() => setIsLeaveModalVisible(true)}>
+              <Text style={[styles.secondaryButtonText, { color: COLORS.error }]}>🚪 Request to Cancel Registration</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -190,6 +304,33 @@ export default function EventDetailsScreen({ route, navigation }) {
         <TouchableOpacity style={[styles.secondaryButton, {marginTop: 10}]} onPress={handleAISummarize}>
           <Text style={styles.secondaryButtonText}>{showAISummary ? 'Hide AI Summary' : '🤖 Smart AI Summary'}</Text>
         </TouchableOpacity>
+
+        {user?.role === 'admin' && (
+          <View style={{ marginTop: 20, padding: 15, backgroundColor: '#f8f9fa', borderRadius: 8 }}>
+            <Text style={{ fontSize: 18, fontWeight: 'bold', color: COLORS.darkNavy, marginBottom: 10 }}>Admin: Registered Users</Text>
+            {event.registeredUsers?.length === 0 ? (
+              <Text style={{ color: COLORS.textLight }}>No users registered yet.</Text>
+            ) : (
+              event.registeredUsers?.map(r => (
+                <View key={r.user?._id} style={{ backgroundColor: '#fff', padding: 10, borderRadius: 8, marginBottom: 10, borderWidth: 1, borderColor: '#eee' }}>
+                  <Text style={{ fontWeight: 'bold' }}>{r.user?.name || 'Unknown'}</Text>
+                  <Text>Role: {r.role}</Text>
+                  <Text>Status: {r.paymentStatus}</Text>
+                  {r.paymentId && <Text style={{ color: COLORS.primary, fontWeight: '500' }}>Payment ID: {r.paymentId}</Text>}
+                  
+                  {r.paymentStatus === 'pending' && (
+                    <TouchableOpacity 
+                      style={{ backgroundColor: COLORS.primary, padding: 8, borderRadius: 5, marginTop: 5, alignItems: 'center' }}
+                      onPress={() => handleApprovePayment(r.user?._id)}
+                    >
+                      <Text style={{ color: COLORS.white, fontWeight: 'bold' }}>Approve Payment</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              ))
+            )}
+          </View>
+        )}
       </View>
       <Modal
         animationType="slide"
@@ -201,33 +342,74 @@ export default function EventDetailsScreen({ route, navigation }) {
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Choose Your Role</Text>
             
-            {event.isPaid && (
-              <View style={styles.paymentInfo}>
-                <Text style={styles.paymentText}>💰 This is a Paid Event: ₹{event.price}</Text>
-                <Text style={styles.paymentSubtext}>Please scan the UPI QR below or pay at the desk.</Text>
-                {/* Mock Payment QR */}
-                <View style={styles.mockQrBox}>
-                  <Text style={styles.mockQrText}>[ Mock UPI QR Code ]</Text>
+              {modalStep === 'choose_role' ? (
+                <>
+                  <TouchableOpacity 
+                    style={[styles.roleBtn, { backgroundColor: COLORS.primary }]} 
+                    onPress={() => handleRoleSelect('Participant')}
+                  >
+                    <Text style={styles.roleBtnText}>Register as Participant</Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity 
+                    style={[styles.roleBtn, { backgroundColor: COLORS.secondary, marginTop: 10 }]} 
+                    onPress={() => handleRoleSelect('Audience')}
+                  >
+                    <Text style={styles.roleBtnText}>Register as Audience</Text>
+                  </TouchableOpacity>
+                </>
+              ) : (
+                <View>
+                  <Text style={[styles.text, { textAlign: 'center', marginBottom: 15 }]}>
+                    Please pay <Text style={{fontWeight: 'bold'}}>₹{event.price}</Text> to complete your registration as <Text style={{fontWeight: 'bold'}}>{selectedRole}</Text>.
+                  </Text>
+                  
+                  {event.paymentQr ? (
+                    <Image source={{ uri: event.paymentQr }} style={{ width: 150, height: 150, alignSelf: 'center', marginBottom: 15, borderRadius: 8 }} />
+                  ) : (
+                    <View style={[styles.mockQrBox, { marginBottom: 15 }]}>
+                      <Text style={styles.mockQrText}>[ Mock UPI QR Code ]</Text>
+                    </View>
+                  )}
+
+                  <TextInput 
+                    style={[styles.input, { borderWidth: 1, borderColor: '#ddd', padding: 12, borderRadius: 8, marginBottom: 15, backgroundColor: COLORS.white }]} 
+                    placeholder="Enter Payment ID / Transaction ID *" 
+                    value={paymentId} 
+                    onChangeText={setPaymentId} 
+                  />
+                  
+                  <TouchableOpacity style={[styles.submitBtn, { backgroundColor: COLORS.primary }]} onPress={handleConfirmPayment}>
+                    <Text style={styles.submitBtnText}>I Have Paid</Text>
+                  </TouchableOpacity>
                 </View>
-              </View>
-            )}
+              )}
+              
+              <TouchableOpacity style={styles.cancelBtn} onPress={() => { setIsRoleModalVisible(false); setModalStep('choose_role'); }}>
+                <Text style={styles.cancelBtnText}>Cancel</Text>
+              </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
-            <TouchableOpacity 
-              style={[styles.roleBtn, { backgroundColor: COLORS.primary }]} 
-              onPress={() => handleRegister('Participant')}
-            >
-              <Text style={styles.roleBtnText}>Register as Participant</Text>
+      {/* Leave Request Modal */}
+      <Modal visible={isLeaveModalVisible} animationType="slide" transparent={true}>
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Request to Cancel Registration</Text>
+            <Text style={styles.text}>Please state the reason for canceling your registration for this event.</Text>
+            <TextInput 
+              style={[styles.input, { height: 100, textAlignVertical: 'top', marginTop: 15 }]} 
+              placeholder="Reason for cancellation..." 
+              value={leaveReason} 
+              onChangeText={setLeaveReason}
+              multiline
+            />
+            <TouchableOpacity style={[styles.submitBtn, { backgroundColor: COLORS.error }]} onPress={handleLeaveRequest}>
+              <Text style={styles.submitBtnText}>Submit Request</Text>
             </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={[styles.roleBtn, { backgroundColor: COLORS.secondary, marginTop: 10 }]} 
-              onPress={() => handleRegister('Audience')}
-            >
-              <Text style={styles.roleBtnText}>Register as Audience</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={[styles.modalCloseBtn, { marginTop: 15 }]} onPress={() => setIsRoleModalVisible(false)}>
-              <Text style={styles.modalCloseBtnText}>Cancel</Text>
+            <TouchableOpacity style={styles.cancelBtn} onPress={() => setIsLeaveModalVisible(false)}>
+              <Text style={styles.cancelBtnText}>Cancel</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -280,6 +462,9 @@ const styles = StyleSheet.create({
   aiSummaryBox: { backgroundColor: '#eef', padding: 15, borderRadius: 8, marginBottom: 15, borderWidth: 1, borderColor: COLORS.primary },
   aiSummaryTitle: { fontSize: 16, fontWeight: 'bold', color: COLORS.darkNavy, marginBottom: 8 },
   aiSummaryText: { fontSize: 14, color: COLORS.textMain, lineHeight: 20 },
+  statsBox: { backgroundColor: '#e2e3e5', padding: 15, borderRadius: 8, marginBottom: 15 },
+  statsTitle: { fontSize: 16, fontWeight: 'bold', color: COLORS.darkNavy, marginBottom: 8 },
+  statsText: { fontSize: 14, color: COLORS.textMain, marginBottom: 4 },
   
   // Modal Styles
   modalContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' },

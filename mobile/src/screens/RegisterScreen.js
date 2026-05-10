@@ -4,7 +4,7 @@ import { AuthContext } from '../store/AuthContext';
 import { COLORS } from '../theme/colors';
 
 export default function RegisterScreen({ navigation }) {
-  const [form, setForm] = useState({ name: '', email: '', password: '', department: 'Computer Science', year: '1', rollNumber: '' });
+  const [form, setForm] = useState({ name: '', email: '', password: '', department: '', year: '', rollNumber: '' });
   const { register } = useContext(AuthContext);
 
   const handleRegister = () => {
@@ -16,42 +16,53 @@ export default function RegisterScreen({ navigation }) {
       <Text style={styles.title}>Create Account</Text>
       
       <View style={styles.form}>
+        <Text style={styles.label}>Full Name</Text>
         <TextInput 
           style={styles.input} 
-          placeholder="Full Name" 
+          placeholder="John Doe" 
           value={form.name}
           onChangeText={(v) => setForm({...form, name: v})}
         />
+        
+        <Text style={styles.label}>Roll Number</Text>
         <TextInput 
           style={styles.input} 
-          placeholder="Roll Number" 
+          placeholder="e.g. 21A91A0501" 
           value={form.rollNumber}
           onChangeText={(v) => setForm({...form, rollNumber: v})}
         />
+        
+        <Text style={styles.label}>Email</Text>
         <TextInput 
           style={styles.input} 
-          placeholder="Email" 
+          placeholder="email@example.com" 
           keyboardType="email-address"
           autoCapitalize="none"
           value={form.email}
           onChangeText={(v) => setForm({...form, email: v})}
         />
+        
+        <Text style={styles.label}>Password</Text>
         <TextInput 
           style={styles.input} 
-          placeholder="Password" 
+          placeholder="Min 6 characters" 
           secureTextEntry
           value={form.password}
           onChangeText={(v) => setForm({...form, password: v})}
         />
+        
+        <Text style={styles.label}>Department</Text>
         <TextInput 
           style={styles.input} 
-          placeholder="Department (e.g. Computer Science)" 
+          placeholder="Enter Department Name" 
           value={form.department}
           onChangeText={(v) => setForm({...form, department: v})}
         />
+        
+        <Text style={styles.label}>Year</Text>
         <TextInput 
           style={styles.input} 
-          placeholder="Year (e.g. 1, 2, 3)" 
+          placeholder="Enter Year" 
           keyboardType="numeric"
           value={form.year}
           onChangeText={(v) => setForm({...form, year: v})}
@@ -88,10 +99,16 @@ const styles = StyleSheet.create({
     padding: 20,
     borderRadius: 16,
   },
+  label: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: COLORS.darkNavy,
+    marginBottom: 5,
+  },
   input: {
     borderWidth: 1,
     borderColor: '#ddd',
-    padding: 15,
+    padding: 12,
     borderRadius: 8,
     marginBottom: 15,
     fontSize: 16,

@@ -78,7 +78,7 @@ io.on('connection', (socket) => {
     
     // Fetch and send chat history
     try {
-      const history = await Message.find({ room }).sort({ createdAt: 1 }).limit(100);
+      const history = await Message.find({ room }).sort({ createdAt: 1 });
       socket.emit('chatHistory', history);
     } catch (e) {
       console.error('Error fetching history:', e);

@@ -126,13 +126,23 @@ router.put('/admin/club/:id', protect, admin, async (req, res) => {
     const club = await Club.findById(request.clubId);
 
     if (status === 'approved' && club) {
-      // Remove user from club
+      // Remove user from club members
+      club.members = club.members.filter(u => u.toString() !== request.userId.toString());
+      
+      // Remove user from slots
       club.availableSlots.forEach(slot => {
         if (slot.bookedBy) {
           slot.bookedBy = slot.bookedBy.filter(u => u.toString() !== request.userId.toString());
         }
       });
       await club.save();
+
+      // Remove club from user's joinedClubs
+      const user = await User.findById(request.userId);
+      if (user) {
+        user.joinedClubs = user.joinedClubs.filter(c => c.toString() !== request.clubId.toString());
+        await user.save();
+      }
     }
 
     // Create targeted notification

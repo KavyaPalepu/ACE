@@ -17,6 +17,9 @@ export default function AdminDashboardScreen({ navigation }) {
   const [eventDate, setEventDate] = useState('');
   const [eventLoc, setEventLoc] = useState('');
   const [eventImg, setEventImg] = useState('');
+  const [isPaid, setIsPaid] = useState(false);
+  const [eventPrice, setEventPrice] = useState('');
+  const [upiId, setUpiId] = useState('');
 
   // Club Form State
   const [clubName, setClubName] = useState('');
@@ -34,7 +37,10 @@ export default function AdminDashboardScreen({ navigation }) {
         description: eventDesc,
         date: new Date(eventDate + 'T12:00:00'), // Append noon to avoid timezone shifts
         location: eventLoc,
-        imageUrl: eventImg || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=500'
+        imageUrl: eventImg || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=500',
+        isPaid: isPaid,
+        price: parseFloat(eventPrice) || 0,
+        upiId: upiId
       });
       Alert.alert('Success', 'Event created successfully!');
       setIsEventModalVisible(false);
@@ -110,6 +116,23 @@ export default function AdminDashboardScreen({ navigation }) {
               <TextInput style={styles.input} placeholder="Date (YYYY-MM-DD) *" value={eventDate} onChangeText={setEventDate} />
               <TextInput style={styles.input} placeholder="Venue/Location *" value={eventLoc} onChangeText={setEventLoc} />
               <TextInput style={styles.input} placeholder="Poster Image URL" value={eventImg} onChangeText={setEventImg} />
+              
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 15 }}>
+                <Text style={{ fontSize: 16, color: COLORS.darkNavy, marginRight: 10 }}>Is Paid Event?</Text>
+                <TouchableOpacity 
+                  style={{ padding: 10, backgroundColor: isPaid ? COLORS.primary : '#ddd', borderRadius: 5 }}
+                  onPress={() => setIsPaid(!isPaid)}
+                >
+                  <Text style={{ color: COLORS.white, fontWeight: 'bold' }}>{isPaid ? 'YES' : 'NO'}</Text>
+                </TouchableOpacity>
+              </View>
+
+              {isPaid && (
+                <>
+                  <TextInput style={styles.input} placeholder="Price (INR) *" value={eventPrice} onChangeText={setEventPrice} keyboardType="numeric" />
+                  <TextInput style={styles.input} placeholder="UPI ID (e.g. admin@upi) *" value={upiId} onChangeText={setUpiId} />
+                </>
+              )}
               
               <TouchableOpacity style={styles.submitBtn} onPress={handleCreateEvent}>
                 <Text style={styles.submitBtnText}>Submit Event</Text>

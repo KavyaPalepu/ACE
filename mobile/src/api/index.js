@@ -6,7 +6,7 @@ import { Platform } from 'react-native';
 // In development, you usually use your computer's local IP address instead of localhost.
 // Web uses localhost, Android Emulator uses 10.0.2.2.
 // For PHYSICAL devices (like your phone via Expo Go), you MUST change this to your computer's IPv4 address!
-let API_URL = 'http://10.16.54.72:5000/api';
+let API_URL = 'http://10.16.59.203:5000/api';
 if (Platform.OS === 'android') {
   // If testing on a physical android device, you might need to comment this out
   // API_URL = 'http://10.0.2.2:5000/api'; 

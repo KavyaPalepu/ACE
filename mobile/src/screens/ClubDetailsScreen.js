@@ -50,7 +50,7 @@ export default function ClubDetailsScreen({ route, navigation }) {
       return;
     }
     try {
-      await api.post(`/clubs/${clubId}/leave-request`, { reason: leaveReason });
+      await api.post('/requests/club-leave', { clubId, reason: leaveReason });
       Alert.alert('Success', 'Leave request submitted successfully! Admin will review it.');
       setIsLeaveModalVisible(false);
       setLeaveReason('');

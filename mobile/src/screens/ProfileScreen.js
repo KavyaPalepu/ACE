@@ -9,6 +9,10 @@ export default function ProfileScreen({ navigation }) {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
+  const [drafts, setDrafts] = useState([
+    { id: 1, title: '🤖 Hackathon 2026', subtitle: 'Incomplete - Stopped at Team Details' },
+    { id: 2, title: '🎨 Cultural Fest', subtitle: 'Incomplete - Stopped at Slot Selection' }
+  ]);
   
   // Form state
   const [name, setName] = useState('');
@@ -26,7 +30,7 @@ export default function ProfileScreen({ navigation }) {
       return;
     }
     try {
-      await api.post('/auth/profile/email-request', { newEmail, reason });
+      await api.post('/requests/email-change', { newEmail, reason });
       Alert.alert('Success', 'Request submitted successfully! Admin will review it.');
       setIsEmailModalVisible(false);
       setNewEmail('');
@@ -144,14 +148,21 @@ export default function ProfileScreen({ navigation }) {
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>My Drafts (In-Progress)</Text>
-        <TouchableOpacity style={styles.itemCard} onPress={() => navigation.navigate('EventDetails', { event: { title: 'Hackathon 2026', description: 'This is a draft registration that you stopped in the middle.', date: new Date(), location: 'Main Auditorium' } })}>
-          <Text style={styles.itemTitle}>🤖 Hackathon 2026</Text>
-          <Text style={styles.itemSubtitle}>Incomplete - Stopped at Team Details</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.itemCard} onPress={() => navigation.navigate('EventDetails', { event: { title: 'Cultural Fest', description: 'This is a draft registration that you stopped in the middle.', date: new Date(), location: 'Open Air Theatre' } })}>
-          <Text style={styles.itemTitle}>🎨 Cultural Fest</Text>
-          <Text style={styles.itemSubtitle}>Incomplete - Stopped at Slot Selection</Text>
-        </TouchableOpacity>
+        {drafts.length > 0 ? (
+          drafts.map((draft) => (
+            <View key={draft.id} style={[styles.itemCard, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
+              <TouchableOpacity style={{ flex: 1 }} onPress={() => navigation.navigate('EventDetails', { event: { title: draft.title.replace('🤖 ', '').replace('🎨 ', ''), description: 'This is a draft registration that you stopped in the middle.', date: new Date(), location: 'Main Auditorium' } })}>
+                <Text style={styles.itemTitle}>{draft.title}</Text>
+                <Text style={styles.itemSubtitle}>{draft.subtitle}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setDrafts(drafts.filter(d => d.id !== draft.id))} style={{ padding: 5 }}>
+                <Text style={{ color: COLORS.error, fontWeight: 'bold' }}>Delete</Text>
+              </TouchableOpacity>
+            </View>
+          ))
+        ) : (
+          <Text style={styles.emptyText}>No drafts available.</Text>
+        )}
       </View>
 
       <View style={styles.section}>
