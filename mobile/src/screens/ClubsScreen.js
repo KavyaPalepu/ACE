@@ -1,5 +1,5 @@
 import React, { useState, useContext, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Image, Alert } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Image, Alert, TextInput } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { AuthContext } from '../store/AuthContext';
 import { COLORS } from '../theme/colors';
@@ -9,6 +9,12 @@ export default function ClubsScreen({ navigation }) {
   const { user } = useContext(AuthContext);
   const [clubs, setClubs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const filteredClubs = clubs.filter(club => 
+    club.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    club.description.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   const fetchClubs = async () => {
     try {
@@ -95,8 +101,16 @@ export default function ClubsScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
+      <View style={{ padding: 15, backgroundColor: COLORS.white }}>
+        <TextInput
+          style={styles.searchBar}
+          placeholder="🔍 Search clubs..."
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+        />
+      </View>
       <FlatList
-        data={clubs}
+        data={filteredClubs}
         keyExtractor={item => item._id}
         renderItem={renderItem}
         contentContainerStyle={styles.list}
@@ -109,6 +123,7 @@ export default function ClubsScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   list: { padding: 16 },
+  searchBar: { backgroundColor: COLORS.background, paddingHorizontal: 15, paddingVertical: 10, borderRadius: 10, borderWidth: 1, borderColor: '#ddd', fontSize: 16 },
   card: { backgroundColor: COLORS.white, borderRadius: 12, marginBottom: 16, shadowColor: COLORS.darkNavy, shadowOpacity: 0.1, shadowOffset: { width: 0, height: 2 }, shadowRadius: 8, elevation: 3, overflow: 'hidden' },
   cardImage: { width: '100%', height: 150 },
   cardContent: { padding: 20 },

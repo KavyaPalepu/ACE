@@ -27,9 +27,10 @@ export default function NotificationsScreen({ navigation }) {
   );
 
   const handlePress = (item) => {
-    if (item.type === 'event' && item.relatedId) {
+    const type = item.type?.toLowerCase();
+    if (type === 'event' && item.relatedId) {
       navigation.navigate('EventDetails', { eventId: item.relatedId });
-    } else if (item.type === 'club' && item.relatedId) {
+    } else if (type === 'club' && item.relatedId) {
       navigation.navigate('ClubDetails', { clubId: item.relatedId });
     }
   };

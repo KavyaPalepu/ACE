@@ -79,14 +79,28 @@ export default function ClubDetailsScreen({ route, navigation }) {
     setShowAISummary(!showAISummary);
   };
 
+  const handleJoinClub = async () => {
+    try {
+      await api.post(`/clubs/${clubId}/join`, {});
+      Alert.alert('Success', 'Successfully joined the club!');
+      fetchClubDetails();
+    } catch (e) {
+      Alert.alert('Error', e.response?.data?.message || 'Error joining club');
+    }
+  };
+
   const handleClubChat = () => {
     navigation.navigate('Chat', { roomName: `Club_${clubId}` });
   };
 
   const handleBookSlot = async (slotIndex) => {
+    if (!isMember) {
+      Alert.alert('Access Denied', 'Please join the club first before booking a slot.');
+      return;
+    }
     try {
       await api.post(`/clubs/${clubId}/join`, { slotIndex });
-      Alert.alert('Success', 'Successfully joined the club & booked the slot! Group chat is unlocked.');
+      Alert.alert('Success', 'Successfully booked the slot!');
       fetchClubDetails(); // Refresh to show joined status
     } catch (e) {
       Alert.alert('Error', e.response?.data?.message || 'Error booking slot');
@@ -130,6 +144,12 @@ export default function ClubDetailsScreen({ route, navigation }) {
         <TouchableOpacity style={styles.secondaryButton} onPress={handleAISummarize}>
           <Text style={styles.secondaryButtonText}>{showAISummary ? 'Hide AI Summary' : '🤖 Smart AI Summary'}</Text>
         </TouchableOpacity>
+
+        {!isMember && user?.role !== 'admin' && (
+          <TouchableOpacity style={[styles.button, { marginTop: 10 }]} onPress={handleJoinClub}>
+            <Text style={styles.buttonText}>Join Club</Text>
+          </TouchableOpacity>
+        )}
 
         {showAISummary && (
           <View style={styles.aiSummaryBox}>
@@ -185,7 +205,7 @@ export default function ClubDetailsScreen({ route, navigation }) {
                       style={styles.button}
                       onPress={() => handleBookSlot(index)}
                     >
-                      <Text style={styles.buttonText}>Book Slot & Join</Text>
+                      <Text style={styles.buttonText}>Book Slot</Text>
                     </TouchableOpacity>
                   )
                 )}

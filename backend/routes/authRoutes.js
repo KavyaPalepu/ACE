@@ -4,14 +4,14 @@ const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const { protect } = require('../middleware/authMiddleware');
 const Event = require('../models/Event');
-const EmailChangeRequest = require('../models/EmailChangeRequest');
+const { validateRegister, validateLogin } = require('../middleware/validationMiddleware');
 
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '30d' });
 };
 
 // Register
-router.post('/register', async (req, res) => {
+router.post('/register', validateRegister, async (req, res) => {
   const { name, email, password, role, department, year, rollNumber } = req.body;
   try {
     const userExists = await User.findOne({ email });
@@ -45,7 +45,7 @@ router.post('/register', async (req, res) => {
 });
 
 // Login
-router.post('/login', async (req, res) => {
+router.post('/login', validateLogin, async (req, res) => {
   const { email, password } = req.body;
   try {
     const user = await User.findOne({ email });
@@ -117,31 +117,6 @@ router.put('/profile', protect, async (req, res) => {
   }
 });
 
-// Submit Email Change Request
-router.post('/profile/email-request', protect, async (req, res) => {
-  const { newEmail, reason } = req.body;
-  try {
-    const user = await User.findById(req.user._id);
-    if (!user) return res.status(404).json({ message: 'User not found' });
 
-    // Check if a pending request already exists
-    const existingRequest = await EmailChangeRequest.findOne({ userId: req.user._id, status: 'pending' });
-    if (existingRequest) {
-      return res.status(400).json({ message: 'You already have a pending email change request.' });
-    }
-
-    const request = await EmailChangeRequest.create({
-      userId: req.user._id,
-      currentEmail: user.email,
-      newEmail,
-      reason,
-      status: 'pending'
-    });
-
-    res.status(201).json({ message: 'Request submitted successfully', request });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
 
 module.exports = router;

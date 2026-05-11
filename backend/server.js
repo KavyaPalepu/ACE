@@ -21,13 +21,15 @@ app.use(cors());
 app.use(express.json());
 
 // Database Connection
-mongoose.connect(process.env.MONGO_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-}).then(() => {
-  console.log('MongoDB Connected');
-  seedAdmin();
-}).catch(err => console.error('MongoDB Connection Error:', err));
+if (process.env.NODE_ENV !== 'test') {
+  mongoose.connect(process.env.MONGO_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  }).then(() => {
+    console.log('MongoDB Connected');
+    seedAdmin();
+  }).catch(err => console.error('MongoDB Connection Error:', err));
+}
 
 const User = require('./models/User');
 const seedAdmin = async () => {
@@ -37,7 +39,7 @@ const seedAdmin = async () => {
       await User.create({
         name: 'System Admin',
         email: 'admin@ace.com',
-        password: 'adminpassword',
+        password: process.env.ADMIN_PASSWORD || 'adminpassword',
         role: 'admin',
         department: 'Administration'
       });
@@ -60,6 +62,7 @@ const clubRoutes = require('./routes/clubRoutes');
 const aiRoutes = require('./routes/aiRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 const requestRoutes = require('./routes/requestRoutes');
+const adminRoutes = require('./routes/adminRoutes');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/events', eventRoutes);
@@ -67,6 +70,7 @@ app.use('/api/clubs', clubRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/requests', requestRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Socket.io for Chat
 io.on('connection', (socket) => {
@@ -107,4 +111,8 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, '0.0.0.0', () => console.log(`Server running on port ${PORT} (Bound to 0.0.0.0)`));
+if (process.env.NODE_ENV !== 'test') {
+  server.listen(PORT, '0.0.0.0', () => console.log(`Server running on port ${PORT} (Bound to 0.0.0.0)`));
+}
+
+module.exports = app;

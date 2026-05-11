@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert, Image, Modal, TextInput } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert, Image, Modal, TextInput, Linking } from 'react-native';
 import { COLORS } from '../theme/colors';
 import api from '../api';
 import { AuthContext } from '../store/AuthContext';
@@ -14,6 +14,8 @@ export default function EventDetailsScreen({ route, navigation }) {
   const [isLeaveModalVisible, setIsLeaveModalVisible] = useState(false);
   const [leaveReason, setLeaveReason] = useState('');
   const [modalStep, setModalStep] = useState('choose_role'); // 'choose_role' or 'payment'
+  const [aiSummary, setAiSummary] = useState('');
+  const [isAiLoading, setIsAiLoading] = useState(false);
   const [selectedRole, setSelectedRole] = useState(null);
   const [paymentId, setPaymentId] = useState('');
   
@@ -97,15 +99,41 @@ export default function EventDetailsScreen({ route, navigation }) {
     setLoading(false);
   };
 
-  const handleAISummarize = () => {
-    setShowAISummary(!showAISummary);
-  };
+  const handleAISummarize = async () => {
+    if (showAISummary) {
+      setShowAISummary(false);
+      return;
+    }
+    
+    if (aiSummary) {
+      setShowAISummary(true);
+      return;
+    }
 
-  const handleResourceRequest = () => {
-    Alert.alert('Resource Request', 'Your request for resources/materials for this event has been submitted to the admin.');
+    setIsAiLoading(true);
+    try {
+      const fullText = `Title: ${event.title}\nDescription: ${event.description}\nLocation: ${event.location}\nDate: ${new Date(event.date).toLocaleDateString()}`;
+      const { data } = await api.post('/ai/summarize', { text: fullText });
+      setAiSummary(data.summary);
+      setShowAISummary(true);
+    } catch (e) {
+      Alert.alert('Error', e.response?.data?.message || 'Failed to generate AI summary');
+    } finally {
+      setIsAiLoading(false);
+    }
   };
 
   const handleEventChat = () => {
+    if (event.isPaid) {
+      const registration = event.registeredUsers?.find(r => r.user?._id === user._id || r.user === user._id);
+      if (!registration || registration.paymentStatus !== 'paid') {
+        Alert.alert('Access Denied', 'You must complete the registration and payment to access the event chat.');
+        return;
+      }
+    } else if (!isRegistered) {
+      Alert.alert('Access Denied', 'You must register for the event to access the chat.');
+      return;
+    }
     navigation.navigate('Chat', { roomName: `Event_${event._id}` });
   };
 
@@ -165,7 +193,7 @@ export default function EventDetailsScreen({ route, navigation }) {
 
   const handleApprovePayment = async (userId) => {
     try {
-      await api.post(`/events/${id}/approve-payment`, { userId });
+      await api.post(`/admin/events/${id}/approve-payment`, { userId });
       Alert.alert('Success', 'Payment approved successfully!');
       // Refetch event to update UI
       const { data } = await api.get(`/events/${id}`);
@@ -266,7 +294,15 @@ export default function EventDetailsScreen({ route, navigation }) {
                   <Text style={styles.paymentSubtext}>Please scan the UPI QR below to pay. Your registration will be confirmed once the admin verifies the payment.</Text>
                   
                   {event.paymentQr ? (
-                    <Image source={{ uri: event.paymentQr }} style={{ width: 150, height: 150, alignSelf: 'center', marginBottom: 10, borderRadius: 8 }} />
+                    <>
+                      <Image source={{ uri: event.paymentQr }} style={{ width: 150, height: 150, alignSelf: 'center', marginBottom: 10, borderRadius: 8 }} />
+                      <TouchableOpacity 
+                        style={{ backgroundColor: COLORS.primary, padding: 10, borderRadius: 8, alignItems: 'center', marginBottom: 10, width: '80%', alignSelf: 'center' }} 
+                        onPress={() => Linking.openURL(event.upiUri).catch(err => Alert.alert('Error', 'Could not open payment app'))}
+                      >
+                        <Text style={{ color: COLORS.white, fontWeight: 'bold' }}>Pay via UPI App</Text>
+                      </TouchableOpacity>
+                    </>
                   ) : (
                     <View style={styles.mockQrBox}>
                       <Text style={styles.mockQrText}>[ Mock UPI QR Code ]</Text>
@@ -280,10 +316,6 @@ export default function EventDetailsScreen({ route, navigation }) {
               <Text style={styles.secondaryButtonText}>💬 Join Event Chat Group</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.secondaryButton} onPress={handleResourceRequest}>
-              <Text style={styles.secondaryButtonText}>📦 Structured Resource Request</Text>
-            </TouchableOpacity>
-
             <TouchableOpacity style={[styles.secondaryButton, { marginTop: 10, borderColor: COLORS.error }]} onPress={() => setIsLeaveModalVisible(true)}>
               <Text style={[styles.secondaryButtonText, { color: COLORS.error }]}>🚪 Request to Cancel Registration</Text>
             </TouchableOpacity>
@@ -293,11 +325,11 @@ export default function EventDetailsScreen({ route, navigation }) {
         {showAISummary && (
           <View style={styles.aiSummaryBox}>
             <Text style={styles.aiSummaryTitle}>🤖 AI Smart Summary</Text>
-            <Text style={styles.aiSummaryText}>
-              This event "{event.title}" is scheduled for {new Date(event.date).toLocaleDateString()} at {event.location}. 
-              It is open to the {event.eligibility?.department || 'All'} department. 
-              Key takeaway: The event will focus on {event.description.substring(0, 50)}... and aims to provide structured collaboration opportunities.
-            </Text>
+            {isAiLoading ? (
+              <ActivityIndicator color={COLORS.primary} />
+            ) : (
+              <Text style={styles.aiSummaryText}>{aiSummary}</Text>
+            )}
           </View>
         )}
 

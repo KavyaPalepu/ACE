@@ -117,6 +117,7 @@ function AdminStack() {
       <Stack.Screen name="ClubDetails" component={ClubDetailsScreen} options={{ headerShown: true, title: 'Club Details', headerStyle: { backgroundColor: COLORS.darkNavy }, headerTintColor: COLORS.white }} />
       <Stack.Screen name="Chat" component={ChatScreen} options={{ headerShown: true, title: 'Chat', headerStyle: { backgroundColor: COLORS.darkNavy }, headerTintColor: COLORS.white }} />
       <Stack.Screen name="AdminRequests" component={AdminRequestsScreen} options={{ headerShown: true, title: 'Pending Requests', headerStyle: { backgroundColor: COLORS.darkNavy }, headerTintColor: COLORS.white }} />
+      <Stack.Screen name="AIChat" component={AIChatScreen} options={{ headerShown: true, title: 'ACE Assistant', headerStyle: { backgroundColor: COLORS.darkNavy }, headerTintColor: COLORS.white }} />
     </Stack.Navigator>
   );
 }

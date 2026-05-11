@@ -19,6 +19,13 @@ router.get('/', protect, async (req, res) => {
       };
     }
     
+    const { type } = req.query;
+    if (type === 'past') {
+      query.date = { $lt: new Date() };
+    } else if (type === 'upcoming') {
+      query.date = { $gte: new Date() };
+    }
+    
     let events = await Event.find(query).populate('organizedBy');
     
     // If no events exist in the database, seed some default ones for demo purposes
@@ -42,6 +49,16 @@ router.get('/', protect, async (req, res) => {
           eligibility: { department: 'Computer Science', year: 'All' },
           imageUrl: 'https://images.unsplash.com/photo-1504384308090-c564bd248275?w=500',
           isPaid: false
+        },
+        {
+          title: 'Freshers Day 2025',
+          description: 'Welcome party for the batch of 2025.',
+          date: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // 30 days ago
+          location: 'Main Auditorium',
+          eligibility: { department: 'All', year: 'All' },
+          imageUrl: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=500',
+          isPaid: false,
+          driveLink: 'https://drive.google.com/drive/folders/1placeholder1'
         }
       ];
       await Event.insertMany(mockEvents);
@@ -109,6 +126,7 @@ router.get('/:id', async (req, res) => {
       // Generate QR Code base64
       const paymentQr = await QRCode.toDataURL(upiUri);
       eventObj.paymentQr = paymentQr;
+      eventObj.upiUri = upiUri; // Return URI for direct linking
     }
     
     res.json(eventObj);
@@ -117,68 +135,11 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// Create an event (Admin only)
-router.post('/', protect, admin, async (req, res) => {
-  const { title, description, date, location, eligibility, imageUrl, isPaid, price } = req.body;
-  try {
-    const event = await Event.create({
-      title,
-      description,
-      date,
-      location,
-      eligibility: eligibility || { department: 'All', year: 'All' },
-      imageUrl,
-      isPaid: isPaid || false,
-      price: price || 0
-    });
 
-    // Create Notification
-    await Notification.create({
-      title: 'New Event Created!',
-      message: `Admin has posted a new event: ${event.title}`,
-      type: 'event',
-      relatedId: event._id
-    });
-    console.log('Notification created for event:', event.title);
 
-    res.status(201).json(event);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
 
-// Delete an event (Admin only)
-router.delete('/:id', protect, admin, async (req, res) => {
-  try {
-    const event = await Event.findById(req.params.id);
-    if (!event) return res.status(404).json({ message: 'Event not found' });
-    
-    await event.deleteOne();
-    res.json({ message: 'Event deleted successfully' });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
 
-// Update an event (Admin only)
-router.put('/:id', protect, admin, async (req, res) => {
-  try {
-    const event = await Event.findByIdAndUpdate(req.params.id, req.body, { new: true });
-    if (!event) return res.status(404).json({ message: 'Event not found' });
-    
-    // Create Notification
-    await Notification.create({
-      title: 'Event Updated!',
-      message: `The event "${event.title}" has been updated by the admin.`,
-      type: 'event',
-      relatedId: event._id
-    });
 
-    res.json(event);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
 
 // Register for an event
 router.post('/:id/register', protect, async (req, res) => {
@@ -224,23 +185,6 @@ router.post('/:id/register', protect, async (req, res) => {
   }
 });
 
-// Approve payment (Admin only)
-router.post('/:id/approve-payment', protect, admin, async (req, res) => {
-  const { userId } = req.body;
-  try {
-    const event = await Event.findById(req.params.id);
-    if (!event) return res.status(404).json({ message: 'Event not found' });
 
-    const registration = event.registeredUsers.find(r => r.user && r.user.toString() === userId);
-    if (!registration) return res.status(404).json({ message: 'Registration not found' });
-
-    registration.paymentStatus = 'paid';
-    await event.save();
-
-    res.json({ message: 'Payment approved successfully' });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
 
 module.exports = router;

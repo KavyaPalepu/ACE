@@ -17,6 +17,7 @@ export default function AdminDashboardScreen({ navigation }) {
   const [eventDate, setEventDate] = useState('');
   const [eventLoc, setEventLoc] = useState('');
   const [eventImg, setEventImg] = useState('');
+  const [eventDept, setEventDept] = useState('All');
   const [isPaid, setIsPaid] = useState(false);
   const [eventPrice, setEventPrice] = useState('');
   const [upiId, setUpiId] = useState('');
@@ -32,7 +33,7 @@ export default function AdminDashboardScreen({ navigation }) {
       return;
     }
     try {
-      await api.post('/events', {
+      await api.post('/admin/events', {
         title: eventTitle,
         description: eventDesc,
         date: new Date(eventDate + 'T12:00:00'), // Append noon to avoid timezone shifts
@@ -40,12 +41,13 @@ export default function AdminDashboardScreen({ navigation }) {
         imageUrl: eventImg || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=500',
         isPaid: isPaid,
         price: parseFloat(eventPrice) || 0,
-        upiId: upiId
+        upiId: upiId,
+        eligibility: { department: eventDept || 'All', year: 'All' }
       });
       Alert.alert('Success', 'Event created successfully!');
       setIsEventModalVisible(false);
       // Clear fields
-      setEventTitle(''); setEventDesc(''); setEventDate(''); setEventLoc(''); setEventImg('');
+      setEventTitle(''); setEventDesc(''); setEventDate(''); setEventLoc(''); setEventImg(''); setEventDept('All');
     } catch (error) {
       Alert.alert('Error', error.response?.data?.message || 'Failed to create event');
     }
@@ -116,6 +118,7 @@ export default function AdminDashboardScreen({ navigation }) {
               <TextInput style={styles.input} placeholder="Date (YYYY-MM-DD) *" value={eventDate} onChangeText={setEventDate} />
               <TextInput style={styles.input} placeholder="Venue/Location *" value={eventLoc} onChangeText={setEventLoc} />
               <TextInput style={styles.input} placeholder="Poster Image URL" value={eventImg} onChangeText={setEventImg} />
+              <TextInput style={styles.input} placeholder="Eligible Department (e.g. CSE or All) *" value={eventDept} onChangeText={setEventDept} />
               
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 15 }}>
                 <Text style={{ fontSize: 16, color: COLORS.darkNavy, marginRight: 10 }}>Is Paid Event?</Text>

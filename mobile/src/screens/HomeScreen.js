@@ -1,5 +1,5 @@
 import React, { useContext, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, RefreshControl, Image, Linking, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, RefreshControl, Image, Linking, Alert, TextInput } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { AuthContext } from '../store/AuthContext';
 import { COLORS } from '../theme/colors';
@@ -10,23 +10,25 @@ export default function HomeScreen({ navigation }) {
   const [events, setEvents] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
 
-  const pastEvents = [
-    {
-      title: 'Freshers Day 2025',
-      imageUrl: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=500',
-      driveLink: 'https://drive.google.com/drive/folders/1placeholder1'
-    },
-    {
-      title: 'Annual Sports Meet 2025',
-      imageUrl: 'https://images.unsplash.com/photo-1517649763962-0c623066013b?w=500',
-      driveLink: 'https://drive.google.com/drive/folders/1placeholder2'
-    }
-  ];
+  const [pastEvents, setPastEvents] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const filteredEvents = events.filter(event => 
+    event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    event.description.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const filteredPastEvents = pastEvents.filter(event => 
+    event.title.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   const fetchEvents = async () => {
     try {
-      const { data } = await api.get('/events');
-      setEvents(data);
+      const upcomingRes = await api.get('/events?type=upcoming');
+      setEvents(upcomingRes.data);
+      
+      const pastRes = await api.get('/events?type=past');
+      setPastEvents(pastRes.data);
     } catch (e) {
       console.log('Error fetching events:', e);
     }
@@ -65,21 +67,31 @@ export default function HomeScreen({ navigation }) {
   );
 
   return (
-    <ScrollView 
-      style={styles.container}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-    >
-      <View style={styles.header}>
-        <Text style={styles.greeting}>Welcome, {user?.name || 'Student'}!</Text>
-        <Text style={styles.subtitle}>{user?.department || 'General'} Department</Text>
-      </View>
+    <View style={{ flex: 1 }}>
+      <ScrollView 
+        style={styles.container}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      >
+        <View style={styles.header}>
+          <Text style={styles.greeting}>Welcome, {user?.name || 'Student'}!</Text>
+          <Text style={styles.subtitle}>{user?.department || 'General'} Department</Text>
+        </View>
 
-      <View style={styles.section}>
+        <View style={{ padding: 15 }}>
+          <TextInput
+            style={styles.searchBar}
+            placeholder="🔍 Search events..."
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+        </View>
+
+        <View style={styles.section}>
         <Text style={styles.sectionTitle}>Upcoming Events</Text>
-        {events.length === 0 ? (
-          <Text style={styles.emptyText}>No events currently available.</Text>
+        {filteredEvents.length === 0 ? (
+          <Text style={styles.emptyText}>No events match your search.</Text>
         ) : (
-          events.map((event) => (
+          filteredEvents.map((event) => (
             <View key={event._id} style={styles.card}>
               {event.imageUrl && <Image source={{ uri: event.imageUrl }} style={styles.cardImage} />}
               <View style={styles.cardContent}>
@@ -111,24 +123,30 @@ export default function HomeScreen({ navigation }) {
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Past Events</Text>
-        {pastEvents.map((event, index) => (
-          <View key={index} style={styles.pastCard}>
-            <Image source={{ uri: event.imageUrl }} style={styles.pastImage} />
-            <View style={styles.pastContent}>
-              <Text style={styles.pastTitle}>{event.title}</Text>
-              <TouchableOpacity onPress={() => Linking.openURL(event.driveLink)}>
-                <Text style={styles.driveLink}>📁 Download Photos (Drive)</Text>
-              </TouchableOpacity>
+        {filteredPastEvents.length === 0 ? (
+          <Text style={styles.emptyText}>No past events match your search.</Text>
+        ) : (
+          filteredPastEvents.map((event) => (
+            <View key={event._id} style={styles.pastCard}>
+              {event.imageUrl && <Image source={{ uri: event.imageUrl }} style={styles.pastImage} />}
+              <View style={styles.pastContent}>
+                <Text style={styles.pastTitle}>{event.title}</Text>
+                <TouchableOpacity onPress={() => Linking.openURL(event.driveLink || 'https://drive.google.com')}>
+                  <Text style={styles.driveLink}>📁 Download Photos (Drive)</Text>
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
-        ))}
+          ))
+        )}
       </View>
 
-      {/* AI FAB Placeholder -> will route to AIChat */}
-      <TouchableOpacity style={styles.fab} onPress={() => navigation.navigate('AIChat')}>
-        <Text style={styles.fabText}>AI</Text>
-      </TouchableOpacity>
-    </ScrollView>
+        </ScrollView>
+
+        {/* Sticky AI FAB */}
+        <TouchableOpacity style={styles.fab} onPress={() => navigation.navigate('AIChat')}>
+          <Text style={styles.fabText}>AI</Text>
+        </TouchableOpacity>
+      </View>
   );
 }
 
@@ -154,6 +172,7 @@ const styles = StyleSheet.create({
   outlineButtonText: { color: COLORS.primary, fontWeight: 'bold' },
   fab: { position: 'absolute', bottom: 30, right: 20, backgroundColor: COLORS.secondary, width: 60, height: 60, borderRadius: 30, justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.2, shadowOffset: { width: 0, height: 2 }, elevation: 5 },
   fabText: { color: COLORS.white, fontWeight: 'bold', fontSize: 18 },
+  searchBar: { backgroundColor: COLORS.white, paddingHorizontal: 15, paddingVertical: 10, borderRadius: 10, borderWidth: 1, borderColor: '#ddd', fontSize: 16 },
   pastCard: { flexDirection: 'row', backgroundColor: COLORS.white, borderRadius: 12, marginBottom: 10, overflow: 'hidden', shadowColor: '#000', shadowOpacity: 0.05, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
   pastImage: { width: 100, height: 80 },
   pastContent: { flex: 1, padding: 12, justifyContent: 'center' },

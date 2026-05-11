@@ -106,7 +106,7 @@ export default function AIChatScreen({ navigation }) {
 
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
 
       {/* Header */}

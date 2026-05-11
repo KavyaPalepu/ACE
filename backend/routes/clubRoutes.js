@@ -135,23 +135,31 @@ router.post('/:id/join', protect, async (req, res) => {
     const club = await Club.findById(req.params.id);
     if (!club) return res.status(404).json({ message: 'Club not found' });
 
+    let userJoined = false;
     if (!club.members.includes(req.user._id)) {
       club.members.push(req.user._id);
+      userJoined = true;
       
-      // Assign slot if provided in req.body
-      if(req.body.slotIndex !== undefined && club.availableSlots[req.body.slotIndex]) {
-        club.availableSlots[req.body.slotIndex].bookedBy.push(req.user._id);
-      }
-      
-      await club.save();
-
       // Add club to user's joined clubs
       const user = await User.findById(req.user._id);
       user.joinedClubs.push(club._id);
       await user.save();
     }
+    
+    // Assign slot if provided in req.body
+    if(req.body.slotIndex !== undefined && club.availableSlots[req.body.slotIndex]) {
+      // Check if user already booked a slot in this club
+      const alreadyBooked = club.availableSlots.some(s => s.bookedBy.includes(req.user._id));
+      if (alreadyBooked) {
+        return res.status(400).json({ message: 'You have already booked a slot in this club.' });
+      }
+      
+      club.availableSlots[req.body.slotIndex].bookedBy.push(req.user._id);
+    }
+    
+    await club.save();
 
-    res.json({ message: 'Successfully joined the club', club });
+    res.json({ message: userJoined ? 'Successfully joined the club' : 'Slot booked successfully', club });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

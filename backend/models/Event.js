@@ -19,7 +19,8 @@ const eventSchema = new mongoose.Schema({
   isPaid: { type: Boolean, default: false },
   price: { type: Number },
   upiId: { type: String },
-  imageUrl: { type: String }
+  imageUrl: { type: String },
+  driveLink: { type: String }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Event', eventSchema);

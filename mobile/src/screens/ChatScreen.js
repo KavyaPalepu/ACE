@@ -6,7 +6,7 @@ import { AuthContext } from '../store/AuthContext';
 import { COLORS } from '../theme/colors';
 
 // Ensure this matches your backend API_URL base
-const SOCKET_URL = 'http://10.16.59.203:5000'; 
+const SOCKET_URL = process.env.EXPO_PUBLIC_API_URL?.replace('/api', '') || 'https://grapple-kilobyte-worry.ngrok-free.dev';
 
 export default function ChatScreen({ route }) {
   const { user } = useContext(AuthContext);
