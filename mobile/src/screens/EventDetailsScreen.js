@@ -158,13 +158,18 @@ export default function EventDetailsScreen({ route, navigation }) {
       setModalStep('payment');
     } else {
       try {
-        await api.post(`/events/${id}/register`, { role });
+        const { data } = await api.post(`/events/${id}/register`, { role });
         Alert.alert('Success', 'Registered successfully!');
         setIsRoleModalVisible(false);
         // Refetch event to update UI
-        const { data } = await api.get(`/events/${id}`);
-        setEvent(data);
+        const { data: eventData } = await api.get(`/events/${id}`);
+        setEvent(eventData);
         setIsRegistered(true);
+        
+        // Navigate to ticket if QR code is returned
+        if (data.qrCode) {
+          navigation.navigate('Ticket', { qrCode: data.qrCode, event: { ...eventData, selectedRole: role } });
+        }
       } catch (e) {
         Alert.alert('Error', e.response?.data?.message || 'Failed to register');
       }
@@ -279,7 +284,7 @@ export default function EventDetailsScreen({ route, navigation }) {
                   <Text style={styles.eligibilityText}>You are Registered ✓</Text>
                 </View>
 
-                <TouchableOpacity style={styles.primaryButton} onPress={() => navigation.navigate('Ticket', { event })}>
+                <TouchableOpacity style={styles.primaryButton} onPress={() => navigation.navigate('Ticket', { event, qrCode: event.registrationQr })}>
                   <Text style={styles.buttonText}>🎟️ View Ticket</Text>
                 </TouchableOpacity>
               </View>

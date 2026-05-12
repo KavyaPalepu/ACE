@@ -114,7 +114,7 @@ router.get('/reset', async (req, res) => {
 });
 
 // Get single event
-router.get('/:id', async (req, res) => {
+router.get('/:id', protect, async (req, res) => {
   try {
     const event = await Event.findById(req.params.id).populate('organizedBy');
     if (!event) return res.status(404).json({ message: 'Event not found' });
@@ -127,6 +127,17 @@ router.get('/:id', async (req, res) => {
       const paymentQr = await QRCode.toDataURL(upiUri);
       eventObj.paymentQr = paymentQr;
       eventObj.upiUri = upiUri; // Return URI for direct linking
+    }
+    
+    // Add registration QR code if user is registered
+    const registration = event.registeredUsers.find(r => r.user && r.user.toString() === req.user._id.toString());
+    if (registration) {
+      const qrData = JSON.stringify({ 
+        userId: req.user._id, 
+        eventId: event._id, 
+        role: registration.role 
+      });
+      eventObj.registrationQr = await QRCode.toDataURL(qrData);
     }
     
     res.json(eventObj);
