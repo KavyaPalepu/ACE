@@ -10,6 +10,8 @@ export default function ClubDetailsScreen({ route, navigation }) {
   const [club, setClub] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showAISummary, setShowAISummary] = useState(false);
+  const [aiSummary, setAiSummary] = useState('');
+  const [isAiLoading, setIsAiLoading] = useState(false);
   
   // Leave Request state
   const [isLeaveModalVisible, setIsLeaveModalVisible] = useState(false);
@@ -75,8 +77,25 @@ export default function ClubDetailsScreen({ route, navigation }) {
     fetchClubDetails();
   }, [clubId]);
 
-  const handleAISummarize = () => {
-    setShowAISummary(!showAISummary);
+  const handleAISummarize = async () => {
+    if (showAISummary) {
+      setShowAISummary(false);
+      return;
+    }
+
+    setShowAISummary(true);
+    if (aiSummary) return; // Don't fetch again
+
+    setIsAiLoading(true);
+    try {
+      const { data } = await api.post('/ai/summarize', {
+        text: `Club Name: ${club.name}\nDescription: ${club.description}`
+      });
+      setAiSummary(data.summary);
+    } catch (e) {
+      setAiSummary('Failed to generate AI summary.');
+    }
+    setIsAiLoading(false);
   };
 
   const handleJoinClub = async () => {
@@ -154,10 +173,11 @@ export default function ClubDetailsScreen({ route, navigation }) {
         {showAISummary && (
           <View style={styles.aiSummaryBox}>
             <Text style={styles.aiSummaryTitle}>🤖 Club AI Summary</Text>
-            <Text style={styles.aiSummaryText}>
-              The {club.name} is a great place to explore your interests in this field. 
-              By joining, you get access to exclusive workshops, peer learning, and event organization opportunities.
-            </Text>
+            {isAiLoading ? (
+              <ActivityIndicator color={COLORS.primary} />
+            ) : (
+              <Text style={styles.aiSummaryText}>{aiSummary}</Text>
+            )}
           </View>
         )}
 

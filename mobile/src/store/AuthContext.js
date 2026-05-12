@@ -21,6 +21,22 @@ export const AuthProvider = ({ children }) => {
     checkUser();
   }, []);
 
+  useEffect(() => {
+    const sendPushToken = async () => {
+      if (user) {
+        const token = await AsyncStorage.getItem('expoPushToken');
+        if (token) {
+          try {
+            await api.post('/auth/push-token', { token });
+          } catch (e) {
+            console.error('Failed to send push token:', e);
+          }
+        }
+      }
+    };
+    sendPushToken();
+  }, [user]);
+
   const login = async (email, password) => {
     try {
       const { data } = await api.post('/auth/login', { email, password });

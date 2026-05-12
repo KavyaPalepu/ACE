@@ -115,4 +115,13 @@ if (process.env.NODE_ENV !== 'test') {
   server.listen(PORT, '0.0.0.0', () => console.log(`Server running on port ${PORT} (Bound to 0.0.0.0)`));
 }
 
+// Centralized Error Handling Middleware
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(err.status || 500).json({
+    message: err.message || 'Something went wrong on the server!',
+    error: process.env.NODE_ENV === 'development' ? err : {}
+  });
+});
+
 module.exports = app;

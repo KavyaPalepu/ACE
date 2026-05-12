@@ -1,6 +1,7 @@
 import 'react-native-gesture-handler';
 import React, { useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StatusBar } from 'expo-status-bar';
 import AppNavigator from './src/navigation/AppNavigator';
 import { AuthProvider } from './src/store/AuthContext';
@@ -30,6 +31,14 @@ export default function App() {
     if (finalStatus !== 'granted') {
       console.log('Failed to get push token for push notification!');
       return;
+    }
+
+    try {
+      const token = (await Notifications.getExpoPushTokenAsync()).data;
+      await AsyncStorage.setItem('expoPushToken', token);
+      console.log('Expo Push Token saved:', token);
+    } catch (e) {
+      console.error('Error getting push token:', e);
     }
   }
 

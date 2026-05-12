@@ -119,4 +119,20 @@ router.put('/profile', protect, async (req, res) => {
 
 
 
+// Save Push Token
+router.post('/push-token', protect, async (req, res) => {
+  const { token } = req.body;
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    
+    user.expoPushToken = token;
+    await user.save();
+    
+    res.json({ message: 'Push token saved successfully' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 module.exports = router;

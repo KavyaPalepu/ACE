@@ -79,6 +79,32 @@ router.post('/', protect, admin, async (req, res) => {
       relatedId: club._id
     });
 
+    // Send Push Notifications
+    const users = await User.find({ expoPushToken: { $exists: true } });
+    const messages = users.map(u => ({
+      to: u.expoPushToken,
+      sound: 'default',
+      title: 'New Club Registered!',
+      body: `A new club "${club.name}" is now available.`,
+      data: { clubId: club._id },
+    }));
+
+    if (messages.length > 0) {
+      try {
+        await fetch('https://exp.host/--/api/v2/push/send', {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json',
+            'Accept-encoding': 'gzip, deflate',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(messages),
+        });
+      } catch (e) {
+        console.error('Error sending push notifications:', e);
+      }
+    }
+
     res.status(201).json(club);
   } catch (error) {
     res.status(500).json({ message: error.message });

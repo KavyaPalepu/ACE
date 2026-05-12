@@ -9,7 +9,8 @@ const userSchema = new mongoose.Schema({
   role: { type: String, enum: ['user', 'admin'], default: 'user' },
   department: { type: String }, // e.g., 'Computer Science'
   year: { type: Number },
-  joinedClubs: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Club' }]
+  joinedClubs: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Club' }],
+  expoPushToken: { type: String }
 }, { timestamps: true });
 
 // Hash password before saving

@@ -5,6 +5,19 @@ import { AuthContext } from '../store/AuthContext';
 import { COLORS } from '../theme/colors';
 import api from '../api';
 
+const CustomImage = ({ uri, style }) => {
+  const [error, setError] = useState(false);
+  const fallback = 'https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=500';
+  
+  return (
+    <Image 
+      source={{ uri: error ? fallback : (uri || fallback) }} 
+      style={style} 
+      onError={() => setError(true)} 
+    />
+  );
+};
+
 export default function ClubsScreen({ navigation }) {
   const { user } = useContext(AuthContext);
   const [clubs, setClubs] = useState([]);
@@ -61,7 +74,7 @@ export default function ClubsScreen({ navigation }) {
 
     return (
       <View style={styles.card}>
-        {item.imageUrl && <Image source={{ uri: item.imageUrl }} style={styles.cardImage} />}
+        <CustomImage uri={item.imageUrl} style={styles.cardImage} />
         <View style={styles.cardContent}>
           <Text style={styles.title}>{item.name}</Text>
           <Text style={styles.description}>{item.description}</Text>
@@ -123,13 +136,13 @@ export default function ClubsScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   list: { padding: 16 },
-  searchBar: { backgroundColor: COLORS.background, paddingHorizontal: 15, paddingVertical: 10, borderRadius: 10, borderWidth: 1, borderColor: '#ddd', fontSize: 16 },
-  card: { backgroundColor: COLORS.white, borderRadius: 12, marginBottom: 16, shadowColor: COLORS.darkNavy, shadowOpacity: 0.1, shadowOffset: { width: 0, height: 2 }, shadowRadius: 8, elevation: 3, overflow: 'hidden' },
+  searchBar: { backgroundColor: '#F1F5F9', paddingHorizontal: 15, paddingVertical: 12, borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0', fontSize: 16 },
+  card: { backgroundColor: COLORS.white, borderRadius: 16, marginBottom: 16, shadowColor: COLORS.darkNavy, shadowOpacity: 0.05, shadowOffset: { width: 0, height: 2 }, shadowRadius: 5, elevation: 2, overflow: 'hidden', borderWidth: 1, borderColor: '#E2E8F0' },
   cardImage: { width: '100%', height: 150 },
   cardContent: { padding: 20 },
-  title: { fontSize: 18, fontWeight: 'bold', color: COLORS.darkNavy, marginBottom: 8 },
+  title: { fontSize: 18, fontWeight: 'bold', color: COLORS.textMain, marginBottom: 8 },
   description: { fontSize: 14, color: COLORS.textLight, marginBottom: 16 },
-  button: { backgroundColor: COLORS.primary, paddingVertical: 10, borderRadius: 8, alignItems: 'center' },
+  button: { backgroundColor: COLORS.primary, paddingVertical: 12, borderRadius: 12, alignItems: 'center' },
   buttonText: { color: COLORS.white, fontWeight: 'bold' },
   empty: { textAlign: 'center', color: COLORS.textLight, marginTop: 20 }
 });

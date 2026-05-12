@@ -5,6 +5,19 @@ import { AuthContext } from '../store/AuthContext';
 import { COLORS } from '../theme/colors';
 import api from '../api';
 
+const CustomImage = ({ uri, style }) => {
+  const [error, setError] = useState(false);
+  const fallback = 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=500';
+  
+  return (
+    <Image 
+      source={{ uri: error ? fallback : (uri || fallback) }} 
+      style={style} 
+      onError={() => setError(true)} 
+    />
+  );
+};
+
 export default function HomeScreen({ navigation }) {
   const { user, logout } = useContext(AuthContext);
   const [events, setEvents] = useState([]);
@@ -87,58 +100,52 @@ export default function HomeScreen({ navigation }) {
         </View>
 
         <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Upcoming Events</Text>
-        {filteredEvents.length === 0 ? (
-          <Text style={styles.emptyText}>No events match your search.</Text>
-        ) : (
-          filteredEvents.map((event) => (
-            <View key={event._id} style={styles.card}>
-              {event.imageUrl && <Image source={{ uri: event.imageUrl }} style={styles.cardImage} />}
-              <View style={styles.cardContent}>
-                <Text style={styles.cardTitle}>{event.title}</Text>
-                <Text style={styles.cardText}>{new Date(event.date).toLocaleDateString()} - {event.location}</Text>
-                <Text style={styles.registeredText}>👥 {event.registeredUsers?.length || 0} Students Registered</Text>
+          <Text style={styles.sectionTitle}>Upcoming Events</Text>
+          
+          {filteredEvents.length === 0 ? (
+            <Text style={styles.emptyText}>No events match your search.</Text>
+          ) : (
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingRight: 16 }}
+            >
+              {filteredEvents.map((event) => (
                 <TouchableOpacity 
-                  style={styles.primaryButton}
+                  key={event._id} 
+                  style={styles.carouselCard}
                   onPress={() => navigation.navigate('EventDetails', { event })}
                 >
-                  <Text style={styles.buttonText}>
-                    {user?.role === 'admin' ? 'View Details' : 'View Details & Register'}
-                  </Text>
+                  <CustomImage uri={event.imageUrl} style={styles.carouselImage} />
+                  <View style={styles.carouselOverlay}>
+                    <Text style={styles.carouselTitle} numberOfLines={1}>{event.title}</Text>
+                    <Text style={styles.carouselText}>{new Date(event.date).toLocaleDateString()} • {event.location}</Text>
+                    <Text style={styles.carouselBadge}>👥 {event.registeredUsers?.length || 0} Registered</Text>
+                  </View>
                 </TouchableOpacity>
+              ))}
+            </ScrollView>
+          )}
+        </View>
 
-                {user?.role === 'admin' && (
-                  <TouchableOpacity 
-                    style={[styles.outlineButton, { borderColor: COLORS.error, marginTop: 10 }]}
-                    onPress={() => handleDeleteEvent(event._id)}
-                  >
-                    <Text style={{ color: COLORS.error, fontWeight: 'bold' }}>Delete Event</Text>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Past Events</Text>
+          {filteredPastEvents.length === 0 ? (
+            <Text style={styles.emptyText}>No past events match your search.</Text>
+          ) : (
+            filteredPastEvents.map((event) => (
+              <View key={event._id} style={styles.pastCard}>
+                <CustomImage uri={event.imageUrl} style={styles.pastImage} />
+                <View style={styles.pastContent}>
+                  <Text style={styles.pastTitle}>{event.title}</Text>
+                  <TouchableOpacity onPress={() => Linking.openURL(event.driveLink || 'https://drive.google.com')}>
+                    <Text style={styles.driveLink}>📁 Download Photos (Drive)</Text>
                   </TouchableOpacity>
-                )}
+                </View>
               </View>
-            </View>
-          ))
-        )}
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Past Events</Text>
-        {filteredPastEvents.length === 0 ? (
-          <Text style={styles.emptyText}>No past events match your search.</Text>
-        ) : (
-          filteredPastEvents.map((event) => (
-            <View key={event._id} style={styles.pastCard}>
-              {event.imageUrl && <Image source={{ uri: event.imageUrl }} style={styles.pastImage} />}
-              <View style={styles.pastContent}>
-                <Text style={styles.pastTitle}>{event.title}</Text>
-                <TouchableOpacity onPress={() => Linking.openURL(event.driveLink || 'https://drive.google.com')}>
-                  <Text style={styles.driveLink}>📁 Download Photos (Drive)</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          ))
-        )}
-      </View>
+            ))
+          )}
+        </View>
 
         </ScrollView>
 
@@ -152,30 +159,32 @@ export default function HomeScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
-  header: { padding: 24, backgroundColor: COLORS.darkNavy, borderBottomLeftRadius: 24, borderBottomRightRadius: 24 },
-  greeting: { fontSize: 24, fontWeight: 'bold', color: COLORS.white },
-  subtitle: { fontSize: 16, color: COLORS.primary, marginTop: 4 },
-  logoutBtn: { position: 'absolute', right: 20, top: 24, backgroundColor: COLORS.error, padding: 8, borderRadius: 5 },
-  logoutText: { color: COLORS.white, fontWeight: 'bold' },
-  section: { marginTop: 20, paddingHorizontal: 16 },
-  sectionTitle: { fontSize: 20, fontWeight: 'bold', color: COLORS.darkNavy, marginBottom: 12 },
-  emptyText: { color: COLORS.textLight, fontStyle: 'italic' },
-  card: { backgroundColor: COLORS.white, borderRadius: 16, marginBottom: 15, shadowColor: COLORS.darkNavy, shadowOpacity: 0.1, shadowOffset: { width: 0, height: 4 }, shadowRadius: 10, elevation: 5, overflow: 'hidden' },
-  cardImage: { width: '100%', height: 150 },
-  cardContent: { padding: 20 },
-  cardTitle: { fontSize: 18, fontWeight: 'bold', color: COLORS.darkNavy, marginBottom: 8 },
-  cardText: { fontSize: 14, color: COLORS.textMain, marginBottom: 8 },
-  registeredText: { fontSize: 14, color: COLORS.secondary, fontWeight: 'bold', marginBottom: 16 },
-  primaryButton: { backgroundColor: COLORS.primary, paddingVertical: 12, borderRadius: 8, alignItems: 'center' },
-  buttonText: { color: COLORS.white, fontWeight: 'bold', fontSize: 16 },
-  outlineButton: { borderWidth: 1, borderColor: COLORS.primary, paddingVertical: 10, borderRadius: 8, alignItems: 'center', marginBottom: 10 },
-  outlineButtonText: { color: COLORS.primary, fontWeight: 'bold' },
-  fab: { position: 'absolute', bottom: 30, right: 20, backgroundColor: COLORS.secondary, width: 60, height: 60, borderRadius: 30, justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.2, shadowOffset: { width: 0, height: 2 }, elevation: 5 },
-  fabText: { color: COLORS.white, fontWeight: 'bold', fontSize: 18 },
-  searchBar: { backgroundColor: COLORS.white, paddingHorizontal: 15, paddingVertical: 10, borderRadius: 10, borderWidth: 1, borderColor: '#ddd', fontSize: 16 },
-  pastCard: { flexDirection: 'row', backgroundColor: COLORS.white, borderRadius: 12, marginBottom: 10, overflow: 'hidden', shadowColor: '#000', shadowOpacity: 0.05, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
-  pastImage: { width: 100, height: 80 },
+  header: { padding: 24, backgroundColor: COLORS.primary, borderBottomLeftRadius: 30, borderBottomRightRadius: 30 },
+  greeting: { fontSize: 24, fontWeight: 'bold', color: '#FFFFFF' },
+  subtitle: { fontSize: 14, color: '#FFFFFF', opacity: 0.9, marginTop: 4, letterSpacing: 0.5 },
+  section: { marginTop: 25, paddingHorizontal: 16 },
+  sectionTitle: { fontSize: 22, fontWeight: '800', color: COLORS.textMain, marginBottom: 16, letterSpacing: 0.5 },
+  emptyText: { color: COLORS.textLight, fontStyle: 'italic', textAlign: 'center', marginTop: 10 },
+  
+  // Carousel Card
+  carouselCard: { width: 280, backgroundColor: COLORS.white, borderRadius: 20, marginRight: 16, overflow: 'hidden', shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 5, elevation: 3, borderWidth: 1, borderColor: '#F1F5F9' },
+  carouselImage: { width: '100%', height: 150 },
+  carouselOverlay: { padding: 16 },
+  carouselTitle: { fontSize: 16, fontWeight: 'bold', color: COLORS.textMain, marginBottom: 4 },
+  carouselText: { fontSize: 12, color: COLORS.primary, fontWeight: '600', marginBottom: 8 },
+  carouselBadge: { fontSize: 12, color: COLORS.textLight, backgroundColor: '#F3F4F6', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, alignSelf: 'flex-start' },
+  
+  deleteMiniBtn: { backgroundColor: '#FEE2E2', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
+  deleteMiniBtnText: { color: COLORS.error, fontSize: 11, fontWeight: 'bold' },
+
+  fab: { position: 'absolute', bottom: 30, right: 20, backgroundColor: COLORS.primary, width: 56, height: 56, borderRadius: 28, justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 5, elevation: 6 },
+  fabText: { color: COLORS.white, fontWeight: 'bold', fontSize: 16 },
+  
+  searchBar: { backgroundColor: COLORS.white, paddingHorizontal: 16, paddingVertical: 12, borderRadius: 16, borderWidth: 1, borderColor: '#E2E8F0', fontSize: 15, shadowColor: '#000', shadowOpacity: 0.03, elevation: 2 },
+  
+  pastCard: { flexDirection: 'row', backgroundColor: COLORS.white, borderRadius: 12, marginBottom: 10, overflow: 'hidden', borderWidth: 1, borderColor: '#F1F5F9' },
+  pastImage: { width: 80, height: 80 },
   pastContent: { flex: 1, padding: 12, justifyContent: 'center' },
-  pastTitle: { fontSize: 16, fontWeight: 'bold', color: COLORS.darkNavy, marginBottom: 4 },
-  driveLink: { fontSize: 14, color: COLORS.primary, fontWeight: '500' }
+  pastTitle: { fontSize: 14, fontWeight: 'bold', color: COLORS.textMain, marginBottom: 4 },
+  driveLink: { fontSize: 12, color: COLORS.primary, fontWeight: '600' }
 });

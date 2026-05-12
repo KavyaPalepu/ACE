@@ -4,10 +4,11 @@ const { protect } = require('../middleware/authMiddleware');
 const { admin } = require('../middleware/adminMiddleware');
 const Event = require('../models/Event');
 const Notification = require('../models/Notification');
+const User = require('../models/User');
 
 // Create an event (Admin only)
 router.post('/events', protect, admin, async (req, res) => {
-  const { title, description, date, location, eligibility, imageUrl, isPaid, price } = req.body;
+  const { title, description, date, location, eligibility, imageUrl, isPaid, price, driveLink } = req.body;
   try {
     const event = await Event.create({
       title,
@@ -17,7 +18,8 @@ router.post('/events', protect, admin, async (req, res) => {
       eligibility: eligibility || { department: 'All', year: 'All' },
       imageUrl,
       isPaid: isPaid || false,
-      price: price || 0
+      price: price || 0,
+      driveLink
     });
 
     // Create Notification
@@ -27,6 +29,32 @@ router.post('/events', protect, admin, async (req, res) => {
       type: 'event',
       relatedId: event._id
     });
+
+    // Send Push Notifications
+    const users = await User.find({ expoPushToken: { $exists: true } });
+    const messages = users.map(u => ({
+      to: u.expoPushToken,
+      sound: 'default',
+      title: 'New Event Created!',
+      body: `Admin has posted a new event: ${event.title}`,
+      data: { eventId: event._id },
+    }));
+
+    if (messages.length > 0) {
+      try {
+        await fetch('https://exp.host/--/api/v2/push/send', {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json',
+            'Accept-encoding': 'gzip, deflate',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(messages),
+        });
+      } catch (e) {
+        console.error('Error sending push notifications:', e);
+      }
+    }
 
     res.status(201).json(event);
   } catch (error) {

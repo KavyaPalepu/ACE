@@ -21,6 +21,7 @@ export default function AdminDashboardScreen({ navigation }) {
   const [isPaid, setIsPaid] = useState(false);
   const [eventPrice, setEventPrice] = useState('');
   const [upiId, setUpiId] = useState('');
+  const [driveLink, setDriveLink] = useState('');
 
   // Club Form State
   const [clubName, setClubName] = useState('');
@@ -42,12 +43,13 @@ export default function AdminDashboardScreen({ navigation }) {
         isPaid: isPaid,
         price: parseFloat(eventPrice) || 0,
         upiId: upiId,
+        driveLink: driveLink,
         eligibility: { department: eventDept || 'All', year: 'All' }
       });
       Alert.alert('Success', 'Event created successfully!');
       setIsEventModalVisible(false);
       // Clear fields
-      setEventTitle(''); setEventDesc(''); setEventDate(''); setEventLoc(''); setEventImg(''); setEventDept('All');
+      setEventTitle(''); setEventDesc(''); setEventDate(''); setEventLoc(''); setEventImg(''); setEventDept('All'); setDriveLink('');
     } catch (error) {
       Alert.alert('Error', error.response?.data?.message || 'Failed to create event');
     }
@@ -119,6 +121,7 @@ export default function AdminDashboardScreen({ navigation }) {
               <TextInput style={styles.input} placeholder="Venue/Location *" value={eventLoc} onChangeText={setEventLoc} />
               <TextInput style={styles.input} placeholder="Poster Image URL" value={eventImg} onChangeText={setEventImg} />
               <TextInput style={styles.input} placeholder="Eligible Department (e.g. CSE or All) *" value={eventDept} onChangeText={setEventDept} />
+              <TextInput style={styles.input} placeholder="Google Drive Link (for past events)" value={driveLink} onChangeText={setDriveLink} />
               
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 15 }}>
                 <Text style={{ fontSize: 16, color: COLORS.darkNavy, marginRight: 10 }}>Is Paid Event?</Text>

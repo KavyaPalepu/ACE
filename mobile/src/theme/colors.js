@@ -1,11 +1,11 @@
 // Theme colors based on the provided logo
 export const COLORS = {
-  primary: '#00d2ff', // Cyan/Turquoise from the triangle
-  secondary: '#3aeda1', // Vibrant green from the triangle
-  darkNavy: '#1a2035', // Navy blue from the "ACE" text
-  background: '#F5F7FA',
-  white: '#FFFFFF',
-  textMain: '#2C3E50',
-  textLight: '#7F8C8D',
-  error: '#E74C3C'
+  primary: '#2563EB', // Modern Blue
+  secondary: '#60A5FA', // Lighter Blue
+  darkNavy: '#111827', // Dark Gray/Black for text
+  background: '#F8FAFC', // Slate 50 background
+  white: '#FFFFFF', // Pure White for cards
+  textMain: '#111827', // Dark Gray
+  textLight: '#4B5563', // Gray 600 for secondary text
+  error: '#EF4444' // Red 500
 };
