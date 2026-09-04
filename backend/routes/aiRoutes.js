@@ -15,7 +15,7 @@ router.post('/chat', protect, async (req, res) => {
   
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.6-flash',
       contents: `You are the ACE Assistant, a helpful AI assistant for a college communication platform. Help students find info about events, clubs, and general campus life.\n\nUser Question: ${prompt}`,
     });
 
@@ -36,7 +36,7 @@ router.post('/summarize', protect, async (req, res) => {
   
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.6-flash',
       contents: `Please summarize the following event details in 2-3 sentences:\n\n${text}`,
     });
 
