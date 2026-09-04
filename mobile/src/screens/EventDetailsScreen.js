@@ -369,7 +369,7 @@ export default function EventDetailsScreen({ route, navigation }) {
                   {r.paymentStatus === 'pending' && (
                     <TouchableOpacity 
                       style={{ backgroundColor: COLORS.primary, padding: 8, borderRadius: 5, marginTop: 5, alignItems: 'center' }}
-                      onPress={() => handleApprovePayment(r.user?._id)}
+                      onPress={() => handleApprovePayment(r.user?._id || r.user)}
                     >
                       <Text style={{ color: COLORS.white, fontWeight: 'bold' }}>Approve Payment</Text>
                     </TouchableOpacity>
