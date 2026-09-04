@@ -196,17 +196,28 @@ export default function EventDetailsScreen({ route, navigation }) {
     }
   };
 
-  const handleApprovePayment = async (userId) => {
-    try {
-      await api.post(`/admin/events/${id}/approve-payment`, { userId });
-      Alert.alert('Success', 'Payment approved successfully!');
-      // Refetch event to update UI
-      const { data } = await api.get(`/events/${id}`);
-      setEvent(data);
-    } catch (e) {
-      Alert.alert('Error', 'Failed to approve payment');
-    }
-  };
+ const handleApprovePayment = async (userId) => {
+  try {
+    console.log('APPROVE PAYMENT');
+    console.log('Event ID:', id);
+    console.log('User ID:', userId);
+
+    const response = await api.post(`/admin/events/${id}/approve-payment`, { userId });
+
+    console.log('APPROVE RESPONSE:', response.data);
+
+    Alert.alert('Success', 'Payment approved successfully!');
+  } catch (error) {
+    console.log('APPROVE PAYMENT ERROR STATUS:', error.response?.status);
+    console.log('APPROVE PAYMENT ERROR DATA:', error.response?.data);
+    console.log('APPROVE PAYMENT ERROR MESSAGE:', error.message);
+
+    Alert.alert(
+      'Error',
+      error.response?.data?.message || error.message || 'Failed to approve payment'
+    );
+  }
+};
 
   if (loading && !event) {
     return <ActivityIndicator size="large" color={COLORS.primary} style={{ flex: 1 }} />;
